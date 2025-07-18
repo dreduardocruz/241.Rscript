@@ -1,0 +1,218 @@
+# Carregar pacotes
+library(tibble)
+library(dplyr)
+
+# Definir dimensão
+dim <- 241
+
+# Gerar matriz binária alternada (0 e 1 em padrão quadriculado)
+binary_pattern <- matrix(data = rep(c(0, 1), length.out = dim * dim),
+                         nrow = dim, ncol = dim)
+
+# Aleatorizar posição (simulando "movimento" ou transição de estados)
+set.seed(42)  # Para reprodutibilidade
+binary_pattern <- binary_pattern[sample(1:dim), sample(1:dim)]
+
+# Converter para tibble
+tibble_241 <- as_tibble(binary_pattern,
+                        .name_repair = "unique")
+
+# Visualizar parte da estrutura
+print(tibble_241[1:10, 1:10])
+
+# Função para aplicar regra de transição simples
+transition_matrix <- function(mat) {
+  padded <- matrix(0, nrow = nrow(mat) + 2, ncol = ncol(mat) + 2)
+  padded[2:(nrow(mat)+1), 2:(ncol(mat)+1)] <- mat
+  
+  new_mat <- matrix(0, nrow = nrow(mat), ncol = ncol(mat))
+  
+  for (i in 1:nrow(mat)) {
+    for (j in 1:ncol(mat)) {
+      neighbors <- padded[i:(i+2), j:(j+2)]
+      total <- sum(neighbors) - padded[i+1, j+1]
+      new_mat[i, j] <- ifelse(total > 4, 1, 0)
+    }
+  }
+  
+  return(new_mat)
+}
+
+# Aplicar transição
+next_state <- transition_matrix(binary_pattern)
+
+# Converter para tibble
+tibble_next <- as_tibble(next_state, .name_repair = "unique")
+print(tibble_next[1:10, 1:10])
+
+install.packages("gganimate")
+install.packages("ggplot2")
+install.packages("tidyr")
+install.packages("dplyr")
+
+library(gganimate)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+# Número de frames da animação
+n_frames <- 10
+
+# Lista para armazenar os estados
+states <- list()
+states[[1]] <- binary_pattern
+
+for (i in 2:n_frames) {
+  states[[i]] <- transition_matrix(states[[i-1]])
+}
+
+# Instale o pacote se ainda não tiver
+install.packages("dplyr")
+
+# Carregue o pacote
+library(dplyr)
+
+install.packages("magrittr")
+library(magrittr)
+
+# Converter todas as matrizes em data frames longos com coordenadas
+tibble_list <- lapply(seq_along(states), function(i) {
+  as_tibble(states[[i]], .name_repair = "unique") %>%
+    mutate(row = row_number()) %>%
+    pivot_longer(cols = starts_with("..."),
+                 names_to = "col", values_to = "value") %>%
+    mutate(col = as.integer(gsub("...", "", col, fixed = TRUE)),
+           frame = i)
+})
+
+# Combinar em um único data frame
+animated_data <- bind_rows(tibble_list)
+
+# Carregar os pacotes
+library(ggplot2)
+library(gganimate)
+
+# Criar o gráfico animado
+p <- ggplot(animated_data, aes(x = col, y = row, fill = factor(value))) +
+  geom_tile(color = "gray90") +
+  scale_fill_manual(values = c("white", "black")) +
+  coord_equal() +
+  theme_void() +
+  labs(title = 'Estado do Universo: Frame {current_frame}') +
+  transition_manual(frame)
+
+# Renderizar a animação
+animate(p, fps = 2, nframes = length(unique(animated_data$frame)), width = 600, height = 600)
+
+install.packages("GA")
+install.packages("plotly")
+install.packages("rgl")       # Para visualização 3D interativa
+install.packages("plot3D")    # Para gráficos 3D estáticos
+
+library(GA)
+library(plotly)
+library(rgl)
+library(plot3D)
+
+rastrigin <- function(x) {
+  20 + x[1]^2 + x[2]^2 - 10 * (cos(2 * pi * x[1]) + cos(2 * pi * x[2]))
+}
+
+  GA_model <- ga(type = "real-valued",
+                 fitness = function(x) -rastrigin(x),
+                 lower = c(-5.12, -5.12),
+                 upper = c(5.12, 5.12),
+                 popSize = 50,
+                 maxiter = 100,
+                 run = 50)
+  
+  x <- y <- seq(-5.12, 5.12, length.out = 241)
+  z <- outer(x, y, Vectorize(function(x, y) rastrigin(c(x, y))))
+  
+  # Visualização com cores
+  persp3D(x, y, z, theta = 45, phi = 30, col = terrain.colors(241),
+          xlab = "X", ylab = "Y", zlab = "Fitness", main = "Superfície Genética 3D")
+
+  points3D(GA_model@solution[1], GA_model@solution[2],
+           -GA_model@fitnessValue, col = "red", pch = 19, add = TRUE)
+  
+  # Carregar pacotes
+  library(GA)
+  library(plotly)
+  
+  # Função Rastrigin (superfície com múltiplos mínimos locais)
+  rastrigin <- function(x) {
+    20 + x[1]^2 + x[2]^2 - 10 * (cos(2 * pi * x[1]) + cos(2 * pi * x[2]))
+  }
+  
+  # Executar algoritmo genético
+  GA_model <- ga(type = "real-valued",
+                 fitness = function(x) -rastrigin(x),
+                 lower = c(-5.12, -5.12),
+                 upper = c(5.12, 5.12),
+                 popSize = 50,
+                 maxiter = 100,
+                 run = 50)
+  
+  # Gerar superfície para visualização
+  x <- y <- seq(-5.12, 5.12, length.out = 241)
+  grid <- expand.grid(x = x, y = y)
+  grid$z <- apply(grid, 1, function(v) rastrigin(c(v['x'], v['y'])))
+  z_matrix <- matrix(grid$z, nrow = length(x), ncol = length(y))
+  
+  # Criar visualização 3D com Plotly
+  plot_ly(x = ~x, y = ~y, z = ~z_matrix) %>%
+    add_surface(colorscale = 'Viridis') %>%
+    add_markers(x = GA_model@solution[1],
+                y = GA_model@solution[2],
+                z = rastrigin(GA_model@solution),
+                marker = list(color = 'red', size = 4)) %>%
+    layout(title = "Superfície Genética 3D - Interativa",
+           scene = list(
+             xaxis = list(title = "X"),
+             yaxis = list(title = "Y"),
+             zaxis = list(title = "Fitness")
+           ))
+  
+  # Carregar pacotes necessários
+  library(GA)
+  library(plotly)
+  
+  # Função de fitness (Rastrigin)
+  rastrigin <- function(x) {
+    20 + x[1]^2 + x[2]^2 - 10 * (cos(2 * pi * x[1]) + cos(2 * pi * x[2]))
+  }
+  
+  # Rodar algoritmo genético
+  GA_model <- ga(type = "real-valued",
+                 fitness = function(x) -rastrigin(x),
+                 lower = c(-5.12, -5.12),
+                 upper = c(5.12, 5.12),
+                 popSize = 50,
+                 maxiter = 100,
+                 run = 50)
+  
+  # Preparar grid e matriz Z para superfície
+  x <- y <- seq(-5.12, 5.12, length.out = 241)
+  grid <- expand.grid(x = x, y = y)
+  grid$z <- apply(grid, 1, function(v) rastrigin(c(v['x'], v['y'])))
+  z_matrix <- matrix(grid$z, nrow = length(x), ncol = length(y))
+  
+  # Gerar visualização interativa com Plotly
+  figura2 <- plot_ly(x = ~x, y = ~y, z = ~z_matrix) %>%
+    add_surface(colorscale = 'Viridis') %>%
+    add_markers(x = GA_model@solution[1],
+                y = GA_model@solution[2],
+                z = rastrigin(GA_model@solution),
+                marker = list(color = 'red', size = 5)) %>%
+    layout(title = "Figura 2 — Planície da Mutação: Superfície de Fitness Genética",
+           scene = list(
+             xaxis = list(title = "Dimensão X"),
+             yaxis = list(title = "Dimensão Y"),
+             zaxis = list(title = "Fitness")
+           ))
+  
+  # Exibir figura
+  figura2
+  
+  
